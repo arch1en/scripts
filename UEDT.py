@@ -3,15 +3,17 @@ import sys
 import shutil
 
 class Config:
-    ProjectDir = "C:/_Workspace/BeBee"
+    ProjectDir = os.path.dirname(os.path.realpath(__file__))
     EngineDir = "C:/_Engines/UE_4.20"
 
 c = Config
 
 def main():
-    if sys.argv[1] == "cleanup":
+    if sys.argv[1] == "clean":
         CleanUpProject()
-
+    else:
+        print("No such command \"" + sys.argv[1] + "\"")
+	
 def CleanUpProject():
     ProjectDir = c.ProjectDir
     PathsToRemove = [
@@ -33,7 +35,7 @@ def CleanUpProject():
             if os.path.exists(FilePath):
                 RemoveFile(FilePath)
 
-    
+    print("Clean Up Ended.")
 
 def RemoveDir(path):
     shutil.rmtree(path, ignore_errors=False, onerror=RmTreeHandleError)
