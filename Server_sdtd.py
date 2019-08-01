@@ -54,7 +54,7 @@ class Config:
 	def GetServerDataModsDir(self):
 		return self.ServerDataDir + "/Mods"
 
-	def GetAllocsFixesPackagePath():
+	def GetAllocsFixesPackagePath(self):
 		return self.GetScriptWorkspaceTempDir() + "/allocs_package.tar.gz"
 		
 	FilesToPreserve = [
@@ -178,7 +178,7 @@ def DownloadAllocsFixes():
 
 	while attempts < 3:
 		try:
-			with urllib.request.urlopen(config.CurrentServerVersion.AllocFixesDownloadURL, timeout=5) as response, open(GetAllocsFixesPackagePath(), 'wb') as out_file:
+			with urllib.request.urlopen(config.CurrentServerVersion.AllocsFixesDownloadUrl, timeout=5) as response, open(config.GetAllocsFixesPackagePath(), 'wb') as out_file:
 				data = response.read() # a `bytes` object
 				out_file.write(data)
 			break
