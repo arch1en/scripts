@@ -1,3 +1,6 @@
+# Execute this file from the root directory of the server.
+# Remember to "init" workspace at the start.
+
 import os
 import sys
 import tarfile
@@ -5,20 +8,40 @@ import subprocess
 import urllib.request
 import urllib.error
 
+class GameVersionData():
+	def __init__(self, Version, ServerDataDir, AllocsFixesDownloadUrl):
+		self.Version = Version
+		self.ServerDataDir = ServerDataDir
+		self.AllocsFixesDownloadUrl = AllocsFixesDownloadUrl
+
 # config
 
 class Config:
 	LogVerbosity = 0
-	ServerProcessName = "7daystodie"
-	SaveDataDir = "/home/gameservers/.local/share/7DaysToDie"
+	ServerName = "server_carnivore"
+	
+	ServerProcessName = "7daystodie"	
 	ServerDataDir = "/home/gameservers/7d2d/zombieland"
+
 	RcloneRemoteName = "7daystodie_remote"
+	
 	RemoteDir = "MEGAsync_VPS/gameservers/7d2d"
 	SteamCmdPath = "/home/gameservers/_tools/steamcmd/steamcmd.sh"
-	ServerConfigPath = "/home/gameservers/7d2d/zombieland/svrcfg_semperinvicta.xml"
-	ScriptWorkspaceDir = "/home/gameservers/7d2d/script_workspace"
-	AllocFixesDownloadURL = "http://illy.bz/fi/7dtd/server_fixes.tar.gz"
-
+	ServerConfigPath = "/home/sdtd/server_carnivore/svrcfg_semperinvicta.xml"
+	ScriptWorkspaceDir = "/home/sdtd/script_workspace"
+	
+	GameVersionDataArray =[
+		{ "a17.4", GameVersionData("alpha17.4", "/home/sdtd/server_carnivore", "http://illy.bz/fi/7dtd/server_fixes_v17_20_30.tar.gz")}
+	]
+	
+	CurrentServerVersion = GameVersionDataArray['a17.4']
+	
+	def GetServerPath(self):
+		return "/home/sdtd"
+	
+	def GetServerSaveDataDir(self):
+		return GetServerPath() + "/.local/share/7DaysToDie"
+	
 	def GetScriptWorkspaceTempDir(self):
 		return self.ScriptWorkspaceDir  + "/Temp"
 	
@@ -31,6 +54,9 @@ class Config:
 	def GetServerDataModsDir(self):
 		return self.ServerDataDir + "/Mods"
 
+	def GetAllocsFixesPackagePath():
+		return self.GetScriptWorkspaceTempDir() + "/allocs_package.tar.gz"
+		
 	FilesToPreserve = [
 		"serverconfig.xml"
 		"Data/Config/buffs.xml"
@@ -54,7 +80,7 @@ def main():
 		LaunchServer()
 	elif sys.argv[1] == "terminate":
 		TerminateServer()
-	elif sys.argv[1] == "init_workspace":
+	elif sys.argv[1] == "init":
 		InitializeWorkspace()
 	else:
 		Log(0, "Wrong command")
@@ -64,7 +90,7 @@ def Backup():
 	args = 	[
 			"rclone",
 			"copy",
-			config.SaveDataDir,
+			config.GetServerSaveDataDir(),
 			config.RcloneRemoteName+":"+config.RemoteDir,
 			"-v"
 	]
@@ -87,11 +113,11 @@ def UpdateServer():
 			"+login",
 			"anonymous",
 			"+force_install_dir",
-			config.ServerDataDir,
+			config.CurrentServerVersion.ServerDataDir,
 			"+app_update",
 			"294420",
 			"-beta",
-			"latest_experimental",
+			config.CurrentServerVersion.Version,
 			"validate",
 			"+quit"]
 
@@ -142,28 +168,32 @@ def IsWorkspaceInitialized():
 
 def UpdateAllocsFixes():
 
-	PackagePath = config.GetScriptWorkspaceTempDir() + "/allocs_package.tar.gz"
+	DownloadAllocsFixes()
+	ExtractAllocsFixex()
+	
+	
+def DownloadAllocsFixes():
 		
 	attempts = 0
 
 	while attempts < 3:
 		try:
-			with urllib.request.urlopen(config.AllocFixesDownloadURL, timeout=5) as response, open(PackagePath, 'wb') as out_file:
+			with urllib.request.urlopen(config.CurrentServerVersion.AllocFixesDownloadURL, timeout=5) as response, open(GetAllocsFixesPackagePath(), 'wb') as out_file:
 				data = response.read() # a `bytes` object
 				out_file.write(data)
 			break
 		except urllib.error.URLError as e:
 			attempts += 1
 			print(type(e))
+
+def	ExtractAllocsFixes():
 	
-	t = tarfile.open(PackagePath)
+	t = tarfile.open(GetAllocsFixesPackagePath())
 	# @todo Add exception handling!
 	#try:
 	f = t.extractall(config.ServerDataDir)
 	#except tarfile.ExtractError as e:
-	
-	
-
+			
 def Log(Verbosity, Message):
 	if Verbosity >= config.LogVerbosity:
 		print(Message)
