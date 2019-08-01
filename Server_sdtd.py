@@ -169,7 +169,7 @@ def IsWorkspaceInitialized():
 def UpdateAllocsFixes():
 
 	DownloadAllocsFixes()
-	ExtractAllocsFixex()
+	ExtractAllocsFixes()
 	
 	
 def DownloadAllocsFixes():
@@ -188,10 +188,10 @@ def DownloadAllocsFixes():
 
 def	ExtractAllocsFixes():
 	
-	t = tarfile.open(GetAllocsFixesPackagePath())
+	t = tarfile.open(config.GetAllocsFixesPackagePath())
 	# @todo Add exception handling!
 	#try:
-	f = t.extractall(config.ServerDataDir)
+	f = t.extractall(config.CurrentServerVersion.ServerDataDir)
 	#except tarfile.ExtractError as e:
 			
 def Log(Verbosity, Message):
