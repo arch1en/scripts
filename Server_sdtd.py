@@ -30,9 +30,9 @@ class Config:
 	ServerConfigPath = "/home/sdtd/server_carnivore/svrcfg_semperinvicta.xml"
 	ScriptWorkspaceDir = "/home/sdtd/script_workspace"
 	
-	GameVersionDataArray =[
-		{ "a17.4", GameVersionData("alpha17.4", "/home/sdtd/server_carnivore", "http://illy.bz/fi/7dtd/server_fixes_v17_20_30.tar.gz")}
-	]
+	GameVersionDataArray ={
+		"a17.4" : GameVersionData("alpha17.4", "/home/sdtd/server_carnivore", "http://illy.bz/fi/7dtd/server_fixes_v17_20_30.tar.gz")
+	}
 	
 	CurrentServerVersion = GameVersionDataArray['a17.4']
 	
