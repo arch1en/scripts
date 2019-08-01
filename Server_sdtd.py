@@ -9,9 +9,10 @@ import urllib.request
 import urllib.error
 
 class GameVersionData():
-	def __init__(self, Version, ServerDataDir, AllocsFixesDownloadUrl):
+	def __init__(self, Version, ServerDataDir, ServerConfigPath, AllocsFixesDownloadUrl):
 		self.Version = Version
 		self.ServerDataDir = ServerDataDir
+		self.ServerConfigPath = ServerConfigPath
 		self.AllocsFixesDownloadUrl = AllocsFixesDownloadUrl
 
 # config
@@ -31,7 +32,7 @@ class Config:
 	ScriptWorkspaceDir = "/home/sdtd/script_workspace"
 	
 	GameVersionDataArray ={
-		"a17.4" : GameVersionData("alpha17.4", "/home/sdtd/server_carnivore", "http://illy.bz/fi/7dtd/server_fixes_v17_20_30.tar.gz")
+		"a17.4" : GameVersionData("alpha17.4", "/home/sdtd/server_carnivore", "/home/sdtd/server_carnivore/serverconfig.xm", "http://illy.bz/fi/7dtd/server_fixes_v17_20_30.tar.gz")
 	}
 	
 	CurrentServerVersion = GameVersionDataArray['a17.4']
@@ -130,8 +131,8 @@ def UpdateServer():
 
 def LaunchServer():
 	Log(0, "LaunchServer started...")
-	args = 	[config.ServerDataDir + "/startserver.sh",
-			"-configfile=" + config.ServerConfigPath
+	args = 	[config.CurrentServerVersion.ServerDataDir + "/startserver.sh",
+			"-configfile=" + config.CurrentServerVersion.ServerConfigPath
 			]
 
 	try:
