@@ -8,13 +8,15 @@ import subprocess
 import urllib.request
 import urllib.error
 
-class GameVersionData():
-	def __init__(self, Version, ServerDataDir, ServerConfigPath, AllocsFixesDownloadUrl):
+# File replacements : dictionary { "PastebinUrl", "PathOfAFileToReplace" }
+# Path of a file to replace will be : ServerDataDir + "/" + PathOfAFileToReplace
+class ServerData():
+	def __init__(self, Version, ServerDataDir, ServerConfigPath, AllocsFixesDownloadUrl, FileReplacements):
 		self.Version = Version
 		self.ServerDataDir = ServerDataDir
 		self.ServerConfigPath = ServerConfigPath
 		self.AllocsFixesDownloadUrl = AllocsFixesDownloadUrl
-
+                self.FileReplacements = FileReplacements # @todo: Implement
 # config
 
 class Config:
@@ -31,17 +33,21 @@ class Config:
 	ServerConfigPath = "/home/sdtd/server_carnivore/svrcfg_semperinvicta.xml"
 	ScriptWorkspaceDir = "/home/sdtd/script_workspace"
 	
-	GameVersionDataArray ={
-		"a17.4" : GameVersionData("alpha17.4", "/home/sdtd/server_carnivore", "/home/sdtd/server_carnivore/serverconfig.xm", "http://illy.bz/fi/7dtd/server_fixes_v17_20_30.tar.gz")
+	ServerDataArray ={
+		"Carnivore" : ServerData(
+                    Version="alpha17.4", 
+                    ServerDataDir="/home/sdtd/server_carnivore", 
+                    ServerConfigPath="/home/sdtd/server_carnivore/serverconfig.xml", 
+                    AllocsFixesDownloadUrl="http://illy.bz/fi/7dtd/server_fixes_v17_20_30.tar.gz")
 	}
 	
-	CurrentServerVersion = GameVersionDataArray['a17.4']
+	CurrentServerData = ServerDataArray['Carnivore']
 	
 	def GetServerPath(self):
 		return "/home/sdtd"
 	
 	def GetServerSaveDataDir(self):
-		return GetServerPath() + "/.local/share/7DaysToDie"
+		return GetServerPath() + "/.local/share/7DaysToDie/Saves"
 	
 	def GetScriptWorkspaceTempDir(self):
 		return self.ScriptWorkspaceDir  + "/Temp"
@@ -67,24 +73,34 @@ config = Config()
 # functions
 
 def main():
-	if sys.argv[1] == "all":
+    arg1 = sys.argv[1]
+
+	if arg1 == "all":
 		#TerminateServer()
 		Backup()
 		UpdateServer()
-	elif sys.argv[1] == "backup":
+	elif arg1 == "backup":
 		Backup()
-	elif sys.argv[1] == "update":
+	elif arg1 == "update":
 		UpdateServer()
-	elif sys.argv[1] == "update_allocs":
+	elif arg1 == "updatefixes":
 		UpdateAllocsFixes()
-	elif sys.argv[1] == "launch":
+	elif arg1 == "launch":
 		LaunchServer()
-	elif sys.argv[1] == "terminate":
+	elif arg1 == "terminate":
 		TerminateServer()
-	elif sys.argv[1] == "init":
+	elif arg1 == "init":
 		InitializeWorkspace()
+        elif arg1 == "migrate"
+                PlayerName = sys.argv[2]
+                MigrateFrom = sys.argv[3]
+                MigrateTo = sys.argv[4]
+                MigrateCharacter(PlayerName, MigrateFrom, MigrateTo)
 	else:
 		Log(0, "Wrong command")
+
+def MigrateCharacter(PlayerName, ServerNameMigrateFrom, ServerNameMigrateTo):
+
 
 def Backup():
 	Log(0, "Backup started...")
@@ -114,11 +130,11 @@ def UpdateServer():
 			"+login",
 			"anonymous",
 			"+force_install_dir",
-			config.CurrentServerVersion.ServerDataDir,
+			config.CurrentServerData.ServerDataDir,
 			"+app_update",
 			"294420",
 			"-beta",
-			config.CurrentServerVersion.Version,
+			config.CurrentServerData.Version,
 			"validate",
 			"+quit"]
 
@@ -131,8 +147,8 @@ def UpdateServer():
 
 def LaunchServer():
 	Log(0, "LaunchServer started...")
-	args = 	[config.CurrentServerVersion.ServerDataDir + "/startserver.sh",
-			"-configfile=" + config.CurrentServerVersion.ServerConfigPath
+	args = 	[config.CurrentServerData.ServerDataDir + "/startserver.sh",
+			"-configfile=" + config.CurrentServerData.ServerConfigPath
 			]
 
 	try:
@@ -150,6 +166,13 @@ def TerminateServer():
 		if config.ServerProcessName in line:
 			pid = int(line.split(None, 1)[0])
 			os.kill(pid, signal.SIGTERM)
+
+def WipeServerData():
+	Answer = raw_input("You are about to wipe all the data, including saved files. Are you sure ? [y/n]"
+	
+	if Answer == "y":
+	
+	
 
 def InitializeWorkspace():
 	
@@ -179,7 +202,7 @@ def DownloadAllocsFixes():
 
 	while attempts < 3:
 		try:
-			with urllib.request.urlopen(config.CurrentServerVersion.AllocsFixesDownloadUrl, timeout=5) as response, open(config.GetAllocsFixesPackagePath(), 'wb') as out_file:
+			with urllib.request.urlopen(config.CurrentServerData.AllocsFixesDownloadUrl, timeout=5) as response, open(config.GetAllocsFixesPackagePath(), 'wb') as out_file:
 				data = response.read() # a `bytes` object
 				out_file.write(data)
 			break
@@ -192,7 +215,7 @@ def	ExtractAllocsFixes():
 	t = tarfile.open(config.GetAllocsFixesPackagePath())
 	# @todo Add exception handling!
 	#try:
-	f = t.extractall(config.CurrentServerVersion.ServerDataDir)
+	f = t.extractall(config.CurrentServerData.ServerDataDir)
 	#except tarfile.ExtractError as e:
 			
 def Log(Verbosity, Message):
