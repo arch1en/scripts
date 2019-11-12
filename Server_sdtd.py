@@ -122,7 +122,7 @@ def UpdateServer():
             "+login",
             "anonymous",
             "+force_install_dir",
-            config.data['Common']['ServerDataDir'],
+            config.CurrentServerData['ServerDataDir'],
             "+app_update",
             "294420",
             "-beta",
