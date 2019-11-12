@@ -5,7 +5,8 @@ import yaml  # requires 'pip install pyyaml'
 import sys
 import os
 import subprocess
-import urllib
+import urllib.request
+import urllib.error
 from pathlib import Path
 
 # File replacements : dictionary { "PastebinUrl", "PathOfAFileToReplace" }
