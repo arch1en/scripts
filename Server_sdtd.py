@@ -4,6 +4,7 @@
 import yaml  # requires 'pip install pyyaml'
 import sys
 import os
+import subprocess
 from pathlib import Path
 
 # File replacements : dictionary { "PastebinUrl", "PathOfAFileToReplace" }
@@ -108,7 +109,6 @@ def Backup():
         raise RuntimeError("command '{}' returned with error (code {}): {}".format(e.cmd, e.returncode, e.output))
     Log(0, "Backup ended...")
     return p
-
 
 def UpdateServer():
     # 1. Turn off the server.
