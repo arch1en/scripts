@@ -1,0 +1,20 @@
+Common:
+    CurrentServerName: Feral
+    LogVerbosity: 0
+    RcloneRemoteName: 7daystodie_remote
+    RcloneRemoteDir: MEGAsync_VPS/gameservers/7d2d
+    ServerProcessName: 7daystodie
+    SteamCmdPath: /home/gameservers/_tools/steamcmd/steamcmd.sh
+    ScriptWorkspaceDir: /home/sdtd/script_workspace
+
+ServerData:
+    Carnivore:
+        Version: alpha17.4
+        ServerDataDir: /home/sdtd/server_carnivore
+        ServerConfigPath: /home/sdtd/server_carnivore/serverconfig.xml
+        AllocsFixesDownloadUrl: http://illy.bz/fi/7dtd/server_fixes_v17_20_30.tar.gz
+    Feral:
+        Version: alpha18.0
+        ServerDataDir: /home/sdtd/server_feral
+        ServerConfigPath: /home/sdtd/server_feral/serverconfig.xml
+        AllocsFixesDownloadUrl: http://illy.bz/fi/7dtd/server_fixes_v19_22_32.tar.gz
