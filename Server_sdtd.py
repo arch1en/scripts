@@ -4,6 +4,7 @@
 import yaml  # requires 'pip install pyyaml'
 import sys
 import os
+from pathlib import Path
 
 # File replacements : dictionary { "PastebinUrl", "PathOfAFileToReplace" }
 # Path of a file to replace will be : ServerDataDir + "/" + PathOfAFileToReplace
@@ -12,7 +13,8 @@ class Config:
 
     def __init__(self):
         self.data = []
-        with open("Config.yaml", "r") as stream:
+        ConfigPath = str(Path(__file__).parent / "Config.yaml")
+        with open(ConfigPath, "r") as stream:
             try:
                 self.data = yaml.safe_load(stream)
             except yaml.YAMLError as exc:
