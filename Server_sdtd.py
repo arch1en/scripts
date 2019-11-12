@@ -7,6 +7,7 @@ import os
 import subprocess
 import urllib.request
 import urllib.error
+import tarfile
 from pathlib import Path
 
 # File replacements : dictionary { "PastebinUrl", "PathOfAFileToReplace" }
