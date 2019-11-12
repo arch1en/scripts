@@ -214,7 +214,7 @@ def ExtractAllocsFixes():
 
 
 def Log(Verbosity, Message):
-    if Verbosity >= config.LogVerbosity:
+    if Verbosity >= config.data['Common']['LogVerbosity']:
         print(Message)
 
 
