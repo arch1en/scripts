@@ -117,12 +117,12 @@ def UpdateServer():
     # 4. Check if both files are similar.
     # 5. If they are almost identical, override.
     Log(0, "UpdateServer started...")
-    args = [config.data['Common']['SteamCmdPath'],
+    args = [str(Path(config.data['Common']['SteamCmdPath'])),
             "steam",
             "+login",
             "anonymous",
             "+force_install_dir",
-            config.CurrentServerData['ServerDataDir'],
+            str(Path(config.CurrentServerData['ServerDataDir'])),
             "+app_update",
             "294420",
             "-beta",

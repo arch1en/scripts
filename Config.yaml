@@ -4,7 +4,7 @@ Common:
     RcloneRemoteName: 7daystodie_remote
     RcloneRemoteDir: MEGAsync_VPS/gameservers/7d2d
     ServerProcessName: 7daystodie
-    SteamCmdPath: /home/gameservers/_tools/steamcmd/steamcmd.sh
+    SteamCmdPath: /home/steam/steamcmd/steamcmd.sh
     ScriptWorkspaceDir: /home/sdtd/script_workspace
 
 ServerData:
