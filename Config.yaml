@@ -1,6 +1,7 @@
 
 Version: 0.17.79
-ScriptWorkspaceDir: 'D:\FactorioSUT_Test'
+#ScriptWorkspaceDir: '/home/factorio/data'
+ScriptWorkspaceDir: 'D:\FactorioSUT_Temp\data'
 SaveName: 'factorio'
 Mods:
   - Name: 'Yuoki Industries'
