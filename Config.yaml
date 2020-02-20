@@ -1,0 +1,7 @@
+
+Version: 0.17.79
+ScriptWorkspaceDir: 'D:\FactorioSUT_Test'
+SaveName: 'factorio'
+Mods:
+  - Name: 'Yuoki Industries'
+    Url: 'https://mods.factorio.com/download/Yuoki/5e4ed013507608000bf7f0cc'
