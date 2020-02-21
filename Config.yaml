@@ -3,6 +3,8 @@ Version: 0.17.79
 #ScriptWorkspaceDir: '/home/factorio/data'
 ScriptWorkspaceDir: 'D:\FactorioSUT_Temp\data'
 SaveName: 'factorio'
+Credentials:
+  User: 'arch1en'
+  Token: 'f11dac7975c63b644d3f178f62525a'
 Mods:
-  - Name: 'Yuoki Industries'
-    Url: 'https://mods.factorio.com/download/Yuoki/5e4ed013507608000bf7f0cc'
+  - Name: 'bobvehicleequipment'

@@ -1,5 +1,5 @@
-
 from pathlib import Path
+from types import FunctionType
 
 import os
 import yaml
@@ -8,6 +8,9 @@ import shutil
 import tarfile
 import subprocess
 import sys
+import re
+import datetime
+
 
 class Config:
 
@@ -19,6 +22,62 @@ class Config:
                 self.data = yaml.safe_load(stream)
             except yaml.YAMLError as exc:
                 print(exc)
+
+    def CheckIntegrity(self):
+        OK = True
+        Message = []
+
+        if self.data['Version'] is None:
+            Message.append("'Version' field is empty. ")
+            OK = False
+
+        if self.data['ScriptWorkspaceDir'] is None:
+            Message.append("'ScriptWorkspaceDir' field is empty. ")
+            OK = False
+
+        if self.data['SaveName'] is None:
+            Message.append("'SaveName' field is empty. ")
+            OK = False
+
+        if not OK:
+            print(f"Config file integrity check failed.")
+            for m in Message:
+                print(f"- {''.join(m)}")
+
+        return OK
+
+    def CheckCredentialsIntegrity(self):
+        OK = True
+        Message = []
+
+        if self.data['Credentials']:
+            if self.data['Credentials']['User'] is None:
+                Message.append("'User' field is empty. ")
+                OK = False
+            elif self.data['Credentials']['Token'] is None:
+                Message.append("'Token' field is empty. ")
+                OK = False
+        else:
+            Message.append("No credentials data.")
+            OK = False
+
+        if not OK:
+            print(f"Config file credentials integrity check failed.")
+            for m in Message:
+                print(f"- {''.join(m)}")
+
+        return OK
+
+    def GetServerVersion(self):
+        ConfigVersion = self.GetData()['Version']
+        ConfigVersion = ConfigVersion.split('.')
+
+        Version = {}
+        Version['Major'] = ConfigVersion[0]
+        Version['Minor'] = ConfigVersion[1]
+        Version['Patch'] = ConfigVersion[2]
+
+        return Version
 
     def GetData(self):
         return self.data
@@ -35,10 +94,11 @@ class Config:
 
     def GetScriptWorkspaceSavesDir(self):
         return Path(self.GetScriptWorkspaceDir()) / "Saves"
+
     # ~Required Dirs
 
     def GetScriptWorkspaceRequiredDirs(self):
-        return [self.GetScriptWorkspaceTempDir(), self.GetScriptWorkspaceServerDir(), self.GetScriptWorkspaceSavesDir() ]
+        return [self.GetScriptWorkspaceTempDir(), self.GetScriptWorkspaceServerDir(), self.GetScriptWorkspaceSavesDir()]
 
     def GetDefaultServerSettingsPath(self):
         return Path(config.GetScriptWorkspaceDir()) / 'server-settings.json'
@@ -49,17 +109,144 @@ class Config:
     def GetDefaultMapSettingsPath(self):
         return Path(config.GetScriptWorkspaceDir()) / 'map-settings.json'
 
+    # Server Dirs
     def GetServerDataModsDir(self):
-        return Path(self.data.CurrentServerData['ServerDataDir']) / "Mods"
+        return Path(self.GetScriptWorkspaceServerDir()) / "mods"
 
-    def GetFactorioExecutablePath(self):
-        return Path(self.GetScriptWorkspaceServerDir() / 'factorio' / 'bin' / 'x64' / 'factorio')
+    def GetServerDataModsDirEnsured(self):
+        if not os.path.exists(self.GetServerDataModsDir()):
+            os.mkdir(self.GetServerDataModsDir())
+        return self.GetServerDataModsDir()
 
     def GetFactorioSavesDir(self):
         return Path(self.GetScriptWorkspaceServerDir() / 'factorio' / 'saves')
 
+    def GetFactorioSavesDirEnsured(self):
+        if not os.path.exists(self.GetFactorioSavesDir()):
+            os.mkdir(self.GetFactorioSavesDir())
+        return self.GetFactorioSavesDir()
+    # ~Server Dirs
+
+    def GetFactorioExecutablePath(self):
+        return Path(self.GetScriptWorkspaceServerDir() / 'factorio' / 'bin' / 'x64' / 'factorio')
+
     def GetCurrentSaveFilePath(self):
-        return Path(self.GetScriptWorkspaceSavesDir() / self.GetData()['SaveName'] / (self.GetData()['SaveName'] + '.zip'))
+        return Path(
+            self.GetScriptWorkspaceSavesDir() / self.GetData()['SaveName'] / (self.GetData()['SaveName'] + '.zip'))
+
+
+class CommandData:
+    Command: str
+    FunctionPtr: FunctionType
+    Description: str
+
+    def __init__(self, Command, FunctionPtr, Description):
+        self.Command = Command
+        self.FunctionPtr = FunctionPtr
+        self.Description = Description
+
+
+class CommandHandler:
+    CommandDatas = []
+
+    def RegisterCommand(self, Command: CommandData):
+        for c in self.CommandDatas:
+            if c.Command == Command.Command:
+                print("Command already registered. Breaking...")
+                break
+
+        self.CommandDatas.append(Command)
+        self.CommandDatas.sort(key=lambda x: x.Command)
+
+    def InvokeHelp(self):
+        for c in self.CommandDatas:
+            print(f"{c.Command} - {c.Description}")
+
+    def EvaluateCommands(self, Args):
+        if len(Args) == 1:
+            print("No commands provided.")
+            return
+
+        if Args[1] == 'help':
+            self.InvokeHelp()
+            return
+
+        for c in self.CommandDatas:
+            if c.Command == Args[1]:
+                c.FunctionPtr
+                break
+
+
+class ModHandler:
+    Username: str
+    Token: str
+
+    def __init__(self, Username, Token):
+        self.Username = Username
+        self.Token = Token
+
+    def GetFactorioModsUrl(self):
+        return 'https://mods.factorio.com/api/mods'
+
+    def RetrieveModsData(self):
+        OK = config.CheckCredentialsIntegrity()
+        if not OK:
+            return
+
+        ModsConfigData = config.GetData()['Mods']
+
+        NewestReleaseIndices = []
+
+        ModsRetrievedData = []
+
+        for Mod in ModsConfigData:
+            r = requests.get(f"{self.GetFactorioModsUrl()}/{Mod['Name']}")
+            if r.status_code == 200:
+                RetrievedData = r.json()
+                ModsRetrievedData.append(RetrievedData)
+
+                Newest = self.GetNewestModVersionDataIndexBasedOnServerVersion(RetrievedData)
+                NewestReleaseIndices.append(Newest)
+
+        self.DownloadMods(ModsRetrievedData, NewestReleaseIndices)
+
+    def DownloadMods(self, ModsData, NewestReleaseIndices):
+
+        for i in range(len(ModsData)):
+            ModData = ModsData[i]
+            DownloadURL = f"{self.GetFactorioModsUrl()}/{ModData['name']}?username={self.Username}&token={self.Token}"
+
+            response = requests.get(DownloadURL, stream=True)
+            PackagePath = str(config.GetServerDataModsDirEnsured() / ModData['releases'][NewestReleaseIndices[i]]['file_name'])
+            open(PackagePath, 'wb').write(response.content)
+
+    def PurgeMods(self):
+        shutil.rmtree(config.GetServerDataModsDir(), ignore_errors=True)
+
+
+    def GetNewestModVersionDataIndexBasedOnServerVersion(self, JsonData):
+        ServerVersion = config.GetServerVersion()
+        RegexPattern = f"^{ServerVersion['Major']}.{ServerVersion['Minor']}"
+
+        Newest = 0
+
+        for i in range(len(JsonData['releases'])):
+            Release = JsonData['releases'][i]
+            Found = re.search(RegexPattern, Release['info_json']['factorio_version'])
+            if Found is not None and Found.group(0) != '':
+                if self.ParseReleaseDate(JsonData['releases'][Newest]) < self.ParseReleaseDate(Release):
+                    Newest = i
+
+        return Newest
+
+
+    def ParseReleaseDate(self, ReleaseData):
+        DateTime = ReleaseData['released_at'].split('T')
+
+        YearMonthDay = DateTime[0].split('-')
+        HourMinuteSecond = DateTime[1].split(':')
+
+        return datetime.datetime(int(YearMonthDay[0]), int(YearMonthDay[1]), int(YearMonthDay[2]), int(HourMinuteSecond[0]), int(HourMinuteSecond[1]), int(HourMinuteSecond[2].split('.')[0]))
 
 def InitiateWorkspaceIfNotReady():
     for i in config.GetScriptWorkspaceRequiredDirs():
@@ -70,7 +257,8 @@ def InitiateWorkspaceIfNotReady():
 
 def InitiateWorkspace():
     for i in config.GetScriptWorkspaceRequiredDirs():
-        if os.path.exists(i) == False or os.path.isdir(i) == False:
+        i = str(i)
+        if os.path.exists(i) is False or os.path.isdir(i) is False:
             os.makedirs(i, exist_ok=True)
 
 
@@ -86,6 +274,7 @@ def DownloadServerData():
 
     return PackagePath
 
+
 def ExtractServerData(ServerDataPackagePath):
     Tar = tarfile.open(ServerDataPackagePath)
     Tar.extractall(str(config.GetScriptWorkspaceServerDir()))
@@ -93,19 +282,24 @@ def ExtractServerData(ServerDataPackagePath):
 
 def TryCreateDefaultServerFiles():
     if not os.path.exists(config.GetDefaultServerSettingsPath()):
-        shutil.copy(f"{str(config.GetScriptWorkspaceServerDir() / 'factorio' / 'data' / 'server-settings.example.json') }", f"{str(config.GetDefaultServerSettingsPath())}")
+        shutil.copy(
+            f"{str(config.GetScriptWorkspaceServerDir() / 'factorio' / 'data' / 'server-settings.example.json')}",
+            f"{str(config.GetDefaultServerSettingsPath())}")
 
     if not os.path.exists(config.GetDefaultMapGenSettingsPath()):
-        shutil.copy(f"{str(config.GetScriptWorkspaceServerDir() / 'factorio' / 'data' / 'map-gen-settings.example.json') }", f"{str(config.GetDefaultMapGenSettingsPath())}")
+        shutil.copy(
+            f"{str(config.GetScriptWorkspaceServerDir() / 'factorio' / 'data' / 'map-gen-settings.example.json')}",
+            f"{str(config.GetDefaultMapGenSettingsPath())}")
 
     if not os.path.exists(config.GetDefaultMapSettingsPath()):
-        shutil.copy(f"{str(config.GetScriptWorkspaceServerDir() / 'factorio' / 'data' / 'map-settings.example.json') }", f"{str(config.GetDefaultMapSettingsPath())}")
+        shutil.copy(f"{str(config.GetScriptWorkspaceServerDir() / 'factorio' / 'data' / 'map-settings.example.json')}",
+                    f"{str(config.GetDefaultMapSettingsPath())}")
+
 
 def CreateSaveData():
-
     ExecutablePath = config.GetFactorioExecutablePath()
     SaveName = config.GetData()['SaveName']
-    Command = f"{str(ExecutablePath)} --create { config.GetCurrentSaveFilePath() } --map-gen-settings {str(config.GetDefaultMapGenSettingsPath())} --map-settings {str(config.GetDefaultMapSettingsPath())} "
+    Command = f"{str(ExecutablePath)} --create {config.GetCurrentSaveFilePath()} --map-gen-settings {str(config.GetDefaultMapGenSettingsPath())} --map-settings {str(config.GetDefaultMapSettingsPath())} "
 
     try:
         p = subprocess.Popen(Command.split()).wait()
@@ -115,6 +309,7 @@ def CreateSaveData():
     print("Factorio Server ended...")
     return p
 
+
 def StartServer():
     print("Factorio Server started...")
 
@@ -123,7 +318,7 @@ def StartServer():
 
     # Todo : Load save files apropriate to the server.
     if not os.path.exists(config.GetFactorioSavesDir()):
-        Command += f"--start-server {config.GetCurrentSaveFilePath()} "
+        Command += f"--start-server {config.GetFactorioSavesDir()} "
     else:
         Command += f"--start-server-load-latest "
 
@@ -143,28 +338,61 @@ def CleanUp():
 
 
 def Purge():
-    shutil.rmtree(str(config.GetScriptWorkspaceDir()),  ignore_errors=True)
+    shutil.rmtree(str(config.GetScriptWorkspaceDir()), ignore_errors=True)
+
 
 if __name__ == '__main__':
     config = Config()
+    commands = CommandHandler()
 
-    if len(sys.argv) == 1:
-        print("No commands provided.")
-    else:
-        arg1 = sys.argv[1]
+    #Temp
+    mods = ModHandler(config.GetData()['Credentials']['User'], config.GetData()['Credentials']['Token'])
+    mods.RetrieveModsData()
+    #~Temp
+    if config.CheckIntegrity() is not True:
+        sys.exit(1)
 
-        if arg1 == "install":
-            InitiateWorkspaceIfNotReady()
-            PackagePath = DownloadServerData()
-            ExtractServerData(PackagePath)
-            CleanUp()
-        elif arg1 == "init.data":
-            TryCreateDefaultServerFiles()
-        elif arg1 == "init.save":
-            CreateSaveData()
-        elif arg1 == "start":
-            StartServer()
-        elif arg1 == "purge":
-            Purge()
-        elif arg1 == "cleanup":
-            CleanUp()
+
+    def InstallCommand():
+        InitiateWorkspaceIfNotReady()
+        ExtractServerData(DownloadServerData())
+        CleanUp()
+    commands.RegisterCommand(CommandData('install', InstallCommand,
+                                         """Downloads, unpacks and puts server files into the <workspace-dir>/Server directory. Depends on \'Version\' field in configuration file.'"""))
+
+
+    def InitDataCommand():
+        TryCreateDefaultServerFiles()
+    commands.RegisterCommand(CommandData('init.data', InitDataCommand,
+                                         """Initializes default server files. After this command is invoked, there will be files for map generation settings and for map settings.
+    It would be wise to configure them, before going further."""))
+
+
+    def InitSaveCommand():
+        CreateSaveData()
+    commands.RegisterCommand(CommandData('init.save', InitSaveCommand,
+                                         """Save files initialization. Corresponding map-gen-settings.json and map-settings.json files should be configured before invoking this command."""))
+
+
+    def StartServerCommand():
+        StartServer()
+    commands.RegisterCommand(CommandData('start', StartServerCommand,
+                                         """Launches factorio server. Depends on \'SaveName\' config field. After launching, server can be stopped by clicking Ctrl+C combo."""))
+
+
+    def DownloadMods():
+        mods.RetrieveModsData()
+    commands.RegisterCommand(CommandData('mods.download', DownloadMods,
+                                         """Download mods that are listed in the config file."""))
+
+    def PurgeMods():
+        mods.PurgeMods()
+    commands.RegisterCommand(CommandData('mods.purge', PurgeMods,
+                                         """Remove all mods from server 'mods' folder."""))
+
+    def PurgeCommand():
+        Purge()
+    commands.RegisterCommand(CommandData('purge', PurgeCommand,
+                                         """Removes all data from script workspace directory. Use with caution !"""))
+
+    commands.EvaluateCommands(sys.argv)
