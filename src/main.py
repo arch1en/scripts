@@ -1,3 +1,6 @@
+# Copyright Artur "Arch1eN" Ostrowski.
+# Use 'help' command for more information.
+
 from pathlib import Path
 from types import FunctionType
 
@@ -16,7 +19,7 @@ class Config:
 
     def __init__(self):
         self.data = []
-        ConfigPath = str(Path(__file__).absolute().parent.parent / "Config.yaml")
+        ConfigPath = str(Path(__file__).absolute().parent / "Config.yaml")
         with open(ConfigPath, "r") as stream:
             try:
                 self.data = yaml.safe_load(stream)
@@ -111,7 +114,7 @@ class Config:
 
     # Server Dirs
     def GetServerDataModsDir(self):
-        return Path(self.GetScriptWorkspaceServerDir()) / "mods"
+        return Path(self.GetScriptWorkspaceServerDir()) / 'factorio' / 'mods'
 
     def GetServerDataModsDirEnsured(self):
         if not os.path.exists(self.GetServerDataModsDir()):
@@ -134,6 +137,16 @@ class Config:
         return Path(
             self.GetScriptWorkspaceSavesDir() / self.GetData()['SaveName'] / (self.GetData()['SaveName'] + '.zip'))
 
+    def GenerateConfigFile(self):
+        ConfigFileBody = """Version: 0.17.79
+ScriptWorkspaceDir: # Mandatory. This folder will be used by the script to manage files.
+SaveName: # A name of a save that will be used by the server.
+Credentials: # Credentials are required for the mods to be downloaded.
+  User: # Username of your account. If you have steam version, you can find it in '%APPDATA%/Factorio/player-data.json' (a 'service-name' parameter)
+  Token: # Token associated with your account. If you have steam version, you can find it in '%APPDATA%/Factorio/player-data.json' (a 'service-token' parameter)
+Mods: This list of mods will be downloaded to the server.
+  - Name: 'bobvehicleequipment' # Mod name. It can be identified by the last part of the mod url from mods.factorio.com (https://mods.factorio.com/mod/bobvehicleequipment).
+"""
 
 class CommandData:
     Command: str
@@ -173,17 +186,13 @@ class CommandHandler:
 
         for c in self.CommandDatas:
             if c.Command == Args[1]:
-                c.FunctionPtr
+                c.FunctionPtr()
                 break
 
 
 class ModHandler:
     Username: str
     Token: str
-
-    def __init__(self, Username, Token):
-        self.Username = Username
-        self.Token = Token
 
     def GetFactorioModsUrl(self):
         return 'https://mods.factorio.com/api/mods'
@@ -192,6 +201,9 @@ class ModHandler:
         OK = config.CheckCredentialsIntegrity()
         if not OK:
             return
+        else:
+            self.Username = config.GetData()['Credentials']['User']
+            self.Token = config.GetData()['Credentials']['Token']
 
         ModsConfigData = config.GetData()['Mods']
 
@@ -248,6 +260,7 @@ class ModHandler:
 
         return datetime.datetime(int(YearMonthDay[0]), int(YearMonthDay[1]), int(YearMonthDay[2]), int(HourMinuteSecond[0]), int(HourMinuteSecond[1]), int(HourMinuteSecond[2].split('.')[0]))
 
+
 def InitiateWorkspaceIfNotReady():
     for i in config.GetScriptWorkspaceRequiredDirs():
         if not os.path.exists(i):
@@ -260,6 +273,7 @@ def InitiateWorkspace():
         i = str(i)
         if os.path.exists(i) is False or os.path.isdir(i) is False:
             os.makedirs(i, exist_ok=True)
+        print("Workspace initiated.")
 
 
 def DownloadServerData():
@@ -318,7 +332,7 @@ def StartServer():
 
     # Todo : Load save files apropriate to the server.
     if not os.path.exists(config.GetFactorioSavesDir()):
-        Command += f"--start-server {config.GetFactorioSavesDir()} "
+        Command += f"--start-server {config.GetCurrentSaveFilePath()} "
     else:
         Command += f"--start-server-load-latest "
 
@@ -344,11 +358,8 @@ def Purge():
 if __name__ == '__main__':
     config = Config()
     commands = CommandHandler()
+    mods = ModHandler()
 
-    #Temp
-    mods = ModHandler(config.GetData()['Credentials']['User'], config.GetData()['Credentials']['Token'])
-    mods.RetrieveModsData()
-    #~Temp
     if config.CheckIntegrity() is not True:
         sys.exit(1)
 
@@ -357,26 +368,20 @@ if __name__ == '__main__':
         InitiateWorkspaceIfNotReady()
         ExtractServerData(DownloadServerData())
         CleanUp()
-    commands.RegisterCommand(CommandData('install', InstallCommand,
-                                         """Downloads, unpacks and puts server files into the <workspace-dir>/Server directory. Depends on \'Version\' field in configuration file.'"""))
-
-
-    def InitDataCommand():
         TryCreateDefaultServerFiles()
-    commands.RegisterCommand(CommandData('init.data', InitDataCommand,
-                                         """Initializes default server files. After this command is invoked, there will be files for map generation settings and for map settings.
-    It would be wise to configure them, before going further."""))
+    commands.RegisterCommand(CommandData('server.install', InstallCommand,
+                                         """Downloads, unpacks and puts server files into the <workspace-dir>/Server directory. Depends on \'Version\' field in configuration file.'"""))
 
 
     def InitSaveCommand():
         CreateSaveData()
-    commands.RegisterCommand(CommandData('init.save', InitSaveCommand,
+    commands.RegisterCommand(CommandData('server.save.create', InitSaveCommand,
                                          """Save files initialization. Corresponding map-gen-settings.json and map-settings.json files should be configured before invoking this command."""))
 
 
     def StartServerCommand():
         StartServer()
-    commands.RegisterCommand(CommandData('start', StartServerCommand,
+    commands.RegisterCommand(CommandData('server.start', StartServerCommand,
                                          """Launches factorio server. Depends on \'SaveName\' config field. After launching, server can be stopped by clicking Ctrl+C combo."""))
 
 
@@ -392,7 +397,7 @@ if __name__ == '__main__':
 
     def PurgeCommand():
         Purge()
-    commands.RegisterCommand(CommandData('purge', PurgeCommand,
+    commands.RegisterCommand(CommandData('server.purge', PurgeCommand,
                                          """Removes all data from script workspace directory. Use with caution !"""))
 
     commands.EvaluateCommands(sys.argv)
