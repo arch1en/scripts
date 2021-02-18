@@ -1,3 +1,3 @@
 from setuptools import setup, find_packages
 
-setup(name='FactorioSUT', version='1.0', packages=find_packages())
+setup(name='ValheimSUT', version='1.0', packages=find_packages())

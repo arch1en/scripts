@@ -1,10 +1,8 @@
+Common:
+    ApplicationName: Valheim
+    ApplicationSteamID: 896660
+    ScriptWorkspaceDir: '/home/valheim/script_workspace'
 
-Version: 0.17.79
-#ScriptWorkspaceDir: '/home/factorio/data'
-ScriptWorkspaceDir: 'D:\FactorioSUT_Temp\data'
-SaveName: 'factorio'
-Credentials:
-  User: 'arch1en'
-  Token: 'f11dac7975c63b644d3f178f62525a'
-Mods:
-  - Name: 'bobvehicleequipment'
+ServerData:
+    Maniga:
+        ServerDataDir: /home/valheim/servers/maniga
