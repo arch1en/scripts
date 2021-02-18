@@ -93,11 +93,14 @@ class Config:
 
         return Version
 
+    def GetData(self):
+        return self.__data
+
     def GetCommonData(self):
         return self.GetData()['Common']
 
-    def GetData(self):
-        return self.__data
+    def GetServerData(self, ServerName):
+        return self.GetData().get("ServerData").get(ServerName)
 
     def GetScriptWorkspaceDir(self):
         return Path(self.GetData()['ScriptWorkspaceDir'])
@@ -223,10 +226,8 @@ def main():
 
                 if serverData:
                     command = args.get('<command>')
-                    if command == 'install':
-                        InitiateWorkspaceIfNotReady()
-                        ExtractServerData(DownloadServerData())
-                        CleanUp()
+                    if command == 'install' or command == 'update':
+                        UpdateServerData()
                     if command == 'start':
                         StartServer()
                     if command == 'purge':
