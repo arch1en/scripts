@@ -41,16 +41,16 @@ class Config:
         OK = True
         Message = []
 
-        if self.GetData()['Version'] is None:
-            Message.append("'Version' field is empty. ")
+        if self.GetCommonData()['ApplicationName'] is None:
+            Message.append("'ApplicationName' field is empty. ")
             OK = False
 
-        if self.GetData()['ScriptWorkspaceDir'] is None:
+        if self.GetCommonData()['ApplicationSteamID'] is None:
+            Message.append("'ApplicationSteamID' field is empty. ")
+            OK = False
+
+        if self.GetCommonData()['ScriptWorkspaceDir'] is None:
             Message.append("'ScriptWorkspaceDir' field is empty. ")
-            OK = False
-
-        if self.GetData()['SaveName'] is None:
-            Message.append("'SaveName' field is empty. ")
             OK = False
 
         if not OK:
@@ -97,7 +97,7 @@ class Config:
         return self.__data
 
     def GetCommonData(self):
-        return self.GetData()['Common']
+        return self.GetData().get('Common')
 
     def GetServerData(self, ServerName):
         return self.GetData().get("ServerData").get(ServerName)
